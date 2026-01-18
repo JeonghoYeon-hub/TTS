@@ -71,9 +71,13 @@
 - **TTS 엔진**: Google Gemini 2.0 Flash
 - **배포 플랫폼**: Cloudflare Pages
 
+## URLs
+- **개발 서버**: https://3000-i4cm1zca2vm3f2mhk4pk8-5185f4aa.sandbox.novita.ai
+- **API 엔드포인트**: https://3000-i4cm1zca2vm3f2mhk4pk8-5185f4aa.sandbox.novita.ai/api/tts
+
 ## 배포 상태
-- **플랫폼**: Cloudflare Pages
-- **상태**: 개발 중
+- **플랫폼**: Cloudflare Pages (개발 환경)
+- **상태**: ✅ Active
 - **마지막 업데이트**: 2026-01-18
 
 ## 다음 단계 권장사항

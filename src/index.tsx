@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
+import { GoogleGenAI } from '@google/genai'
 
 const app = new Hono()
 
@@ -10,71 +11,75 @@ app.use('/api/*', cors())
 // 정적 파일 서빙
 app.use('/static/*', serveStatic({ root: './public' }))
 
-// Gemini TTS API 프록시
+// Google Gemini TTS API
 app.post('/api/tts', async (c) => {
   try {
-    const { text, voice = 'Aoede', language = 'ko-KR' } = await c.req.json()
+    const { text, voice = 'Kore', language = 'ko-KR' } = await c.req.json()
     
     if (!text) {
       return c.json({ error: '텍스트를 입력해주세요.' }, 400)
     }
 
-    const apiKey = 'AIzaSyDniM_v_rTlDWEzB-rTnUq5_H-Ci12XrIw'
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`
+    // 음성 매핑
+    const voiceMap: Record<string, string> = {
+      'ko-KR-Standard-A': 'Kore',
+      'ko-KR-Standard-B': 'Aoede',
+      'ko-KR-Standard-C': 'Charon',
+      'ko-KR-Standard-D': 'Puck',
+      'en-US-Standard-A': 'Puck',
+      'en-US-Standard-C': 'Aoede',
+      'ja-JP-Standard-A': 'Kore',
+      'ja-JP-Standard-C': 'Charon',
+      'zh-CN-Standard-A': 'Kore',
+      'zh-CN-Standard-C': 'Puck',
+    }
 
-    // Gemini API 요청
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: text
-          }]
-        }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: voice
-              }
+    const selectedVoice = voiceMap[voice] || 'Kore'
+    const apiKey = 'AIzaSyDniM_v_rTlDWEzB-rTnUq5_H-Ci12XrIw'
+
+    // Google GenAI 초기화
+    const ai = new GoogleGenAI({ apiKey })
+
+    // TTS 생성 요청 (Google 공식 예제의 모델명 사용)
+    // TTS 모델은 텍스트를 음성으로만 변환해야 하므로 명확한 지시 필요
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-preview-tts',
+      contents: [{
+        parts: [{
+          text: `Read this text aloud: ${text}`
+        }]
+      }],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName: selectedVoice
             }
           }
         }
-      })
+      }
     })
 
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error('Gemini API Error:', errorData)
-      return c.json({ error: 'TTS 생성 중 오류가 발생했습니다.', details: errorData }, 500)
-    }
-
-    const data = await response.json()
-    
     // 오디오 데이터 추출
-    if (data.candidates && data.candidates[0]?.content?.parts) {
-      const audioPart = data.candidates[0].content.parts.find(
-        (part: any) => part.inlineData && part.inlineData.mimeType?.startsWith('audio/')
-      )
-      
-      if (audioPart && audioPart.inlineData) {
-        return c.json({
-          success: true,
-          audio: audioPart.inlineData.data,
-          mimeType: audioPart.inlineData.mimeType
-        })
-      }
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
+    
+    if (audioData) {
+      return c.json({
+        success: true,
+        audio: audioData,
+        mimeType: 'audio/wav'
+      })
     }
 
     return c.json({ error: '오디오 데이터를 찾을 수 없습니다.' }, 500)
 
   } catch (error: any) {
     console.error('TTS Error:', error)
-    return c.json({ error: '서버 오류가 발생했습니다.', details: error.message }, 500)
+    return c.json({ 
+      error: 'TTS 생성 중 오류가 발생했습니다.', 
+      details: error.message 
+    }, 500)
   }
 })
 
@@ -129,11 +134,16 @@ app.get('/', (c) => {
                             id="voiceSelect" 
                             class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
                         >
-                            <option value="Puck">Puck (남성)</option>
-                            <option value="Charon">Charon (남성)</option>
-                            <option value="Kore">Kore (여성)</option>
-                            <option value="Fenrir">Fenrir (남성)</option>
-                            <option value="Aoede" selected>Aoede (여성)</option>
+                            <option value="ko-KR-Standard-A" selected>Kore (여성)</option>
+                            <option value="ko-KR-Standard-B">Aoede (여성)</option>
+                            <option value="ko-KR-Standard-C">Charon (남성)</option>
+                            <option value="ko-KR-Standard-D">Puck (남성)</option>
+                            <option value="en-US-Standard-A">Puck (영어 남성)</option>
+                            <option value="en-US-Standard-C">Aoede (영어 여성)</option>
+                            <option value="ja-JP-Standard-A">Kore (일본어 여성)</option>
+                            <option value="ja-JP-Standard-C">Charon (일본어 남성)</option>
+                            <option value="zh-CN-Standard-A">Kore (중국어 여성)</option>
+                            <option value="zh-CN-Standard-C">Puck (중국어 남성)</option>
                         </select>
                     </div>
                     <div>
@@ -224,8 +234,8 @@ app.get('/', (c) => {
             const downloadBtn = document.getElementById('downloadBtn');
             const newBtn = document.getElementById('newBtn');
 
+            let currentAudioUrl = null;
             let currentAudioData = null;
-            let currentMimeType = null;
 
             // 글자 수 카운트
             scriptInput.addEventListener('input', () => {
@@ -254,9 +264,8 @@ app.get('/', (c) => {
                         language: languageSelect.value
                     });
 
-                    if (response.data.success) {
+                    if (response.data.success && response.data.audio) {
                         currentAudioData = response.data.audio;
-                        currentMimeType = response.data.mimeType;
                         
                         // Base64를 Blob으로 변환
                         const binaryString = atob(currentAudioData);
@@ -264,11 +273,13 @@ app.get('/', (c) => {
                         for (let i = 0; i < binaryString.length; i++) {
                             bytes[i] = binaryString.charCodeAt(i);
                         }
-                        const blob = new Blob([bytes], { type: currentMimeType });
-                        const url = URL.createObjectURL(blob);
+                        const blob = new Blob([bytes], { type: 'audio/wav' });
+                        currentAudioUrl = URL.createObjectURL(blob);
                         
                         // 오디오 플레이어 표시
-                        audioElement.src = url;
+                        audioElement.src = currentAudioUrl;
+                        audioElement.style.display = 'block';
+                        downloadBtn.style.display = 'block';
                         audioPlayer.classList.remove('hidden');
                         audioElement.play();
                     } else {
@@ -285,23 +296,14 @@ app.get('/', (c) => {
 
             // 다운로드
             downloadBtn.addEventListener('click', () => {
-                if (!currentAudioData) return;
-                
-                const binaryString = atob(currentAudioData);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const blob = new Blob([bytes], { type: currentMimeType });
-                const url = URL.createObjectURL(blob);
+                if (!currentAudioUrl) return;
                 
                 const a = document.createElement('a');
-                a.href = url;
+                a.href = currentAudioUrl;
                 a.download = 'gemini-tts-' + Date.now() + '.wav';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                URL.revokeObjectURL(url);
             });
 
             // 새로 만들기
@@ -310,8 +312,11 @@ app.get('/', (c) => {
                 charCount.textContent = '0';
                 audioPlayer.classList.add('hidden');
                 audioElement.src = '';
+                if (currentAudioUrl) {
+                    URL.revokeObjectURL(currentAudioUrl);
+                }
+                currentAudioUrl = null;
                 currentAudioData = null;
-                currentMimeType = null;
             });
 
             // 에러 표시
