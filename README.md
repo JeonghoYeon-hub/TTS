@@ -2,19 +2,24 @@
 
 ## 프로젝트 개요
 - **이름**: Gemini TTS 웹앱
-- **목표**: 텍스트 입력을 받아서 Google Gemini TTS 엔진으로 고품질 음성 파일을 생성하는 웹 애플리케이션
+- **목표**: Google Gemini 2.5 Flash TTS 엔진을 사용하여 텍스트를 고품질 음성으로 변환하는 웹 애플리케이션
 - **주요 기능**:
   - 텍스트 입력 및 실시간 글자 수 표시
-  - 다양한 음성 옵션 선택 (Puck, Charon, Kore, Fenrir, Aoede)
+  - 다양한 음성 옵션 선택 (Kore, Aoede, Charon, Puck)
   - 다국어 지원 (한국어, 영어, 일본어, 중국어)
   - 실시간 음성 생성 및 재생
-  - 생성된 음성 파일 다운로드
+  - 생성된 음성 파일 다운로드 (.wav 형식)
+
+## URLs
+- **개발 서버**: https://3000-i4cm1zca2vm3f2mhk4pk8-5185f4aa.sandbox.novita.ai
+- **API 엔드포인트**: https://3000-i4cm1zca2vm3f2mhk4pk8-5185f4aa.sandbox.novita.ai/api/tts
 
 ## 현재 완료된 기능
 ✅ 텍스트 입력 인터페이스
 ✅ 음성 및 언어 선택 기능
-✅ Gemini API 연동 (TTS 생성)
-✅ 실시간 오디오 재생
+✅ Gemini API 연동 (@google/genai 패키지 사용)
+✅ **gemini-2.5-flash-preview-tts 모델 사용**
+✅ 실시간 오디오 재생 (WAV 형식)
 ✅ 음성 파일 다운로드
 ✅ 반응형 UI 디자인 (Tailwind CSS)
 ✅ 에러 핸들링
@@ -28,7 +33,7 @@
     ```json
     {
       "text": "변환할 텍스트",
-      "voice": "Aoede",
+      "voice": "ko-KR-Standard-A",
       "language": "ko-KR"
     }
     ```
@@ -36,7 +41,7 @@
     ```json
     {
       "success": true,
-      "audio": "base64_encoded_audio_data",
+      "audio": "base64_encoded_wav_data",
       "mimeType": "audio/wav"
     }
     ```
@@ -49,31 +54,29 @@
   - TTS 요청: text, voice, language
   - TTS 응답: audio (base64), mimeType
 - **스토리지 서비스**: 없음 (상태 비저장 API)
+- **TTS 모델**: Google Gemini 2.5 Flash Preview TTS (`gemini-2.5-flash-preview-tts`)
 - **데이터 플로우**: 
   1. 클라이언트가 텍스트 입력
-  2. Hono 백엔드가 Gemini API 호출
-  3. Base64 오디오 데이터 반환
+  2. Hono 백엔드가 @google/genai 패키지로 Gemini API 호출
+  3. Base64 WAV 오디오 데이터 반환
   4. 클라이언트에서 Blob으로 변환 및 재생
 
 ## 사용 가이드
 1. 웹 페이지에 접속
 2. 텍스트 영역에 음성으로 변환할 텍스트 입력
-3. 원하는 음성(Puck, Charon, Kore, Fenrir, Aoede) 선택
+3. 원하는 음성 선택 (Kore, Aoede, Charon, Puck)
 4. 언어 선택 (한국어, 영어, 일본어, 중국어)
 5. "음성 생성하기" 버튼 클릭
 6. 생성된 음성 자동 재생
-7. 필요시 다운로드 버튼으로 저장
+7. 필요시 다운로드 버튼으로 WAV 파일 저장
 
 ## 기술 스택
 - **프레임워크**: Hono (Cloudflare Workers)
 - **프론트엔드**: Vanilla JavaScript + Tailwind CSS
 - **HTTP 클라이언트**: Axios
-- **TTS 엔진**: Google Gemini 2.0 Flash
+- **TTS 엔진**: Google Gemini 2.5 Flash Preview TTS
+- **SDK**: @google/genai (공식 Google AI SDK)
 - **배포 플랫폼**: Cloudflare Pages
-
-## URLs
-- **개발 서버**: https://3000-i4cm1zca2vm3f2mhk4pk8-5185f4aa.sandbox.novita.ai
-- **API 엔드포인트**: https://3000-i4cm1zca2vm3f2mhk4pk8-5185f4aa.sandbox.novita.ai/api/tts
 
 ## 배포 상태
 - **플랫폼**: Cloudflare Pages (개발 환경)
@@ -81,10 +84,11 @@
 - **마지막 업데이트**: 2026-01-18
 
 ## 다음 단계 권장사항
-1. ✨ 음성 속도 조절 기능 추가
+1. ✨ 음성 속도 및 피치 조절 기능 추가
 2. ✨ 음성 샘플 미리듣기 기능
-3. ✨ 히스토리 기능 (최근 생성한 음성 목록)
+3. ✨ 히스토리 기능 (최근 생성한 음성 목록 - D1 Database 활용)
 4. ✨ 텍스트 파일 업로드 기능
 5. ✨ 배치 처리 (여러 텍스트 한번에 생성)
 6. 🔒 API 키를 환경변수로 관리 (보안 강화)
 7. 📊 사용량 추적 및 통계
+8. 🚀 프로덕션 배포 (Cloudflare Pages)
