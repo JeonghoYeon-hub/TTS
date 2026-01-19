@@ -55,11 +55,16 @@
   - TTS 응답: audio (base64), mimeType
 - **스토리지 서비스**: 없음 (상태 비저장 API)
 - **TTS 모델**: Google Gemini 2.5 Flash Preview TTS (`gemini-2.5-flash-preview-tts`)
+- **오디오 처리**:
+  1. Gemini API는 **원시 PCM 데이터** 반환 (24kHz, 16-bit, mono)
+  2. 백엔드에서 **WAV 헤더 자동 생성** (44 bytes)
+  3. WAV 헤더 + PCM 데이터 결합 → Base64 인코딩
+  4. 클라이언트에서 Base64 디코딩 → Blob 변환 → 재생
 - **데이터 플로우**: 
   1. 클라이언트가 텍스트 입력
   2. Hono 백엔드가 @google/genai 패키지로 Gemini API 호출
-  3. Base64 WAV 오디오 데이터 반환
-  4. 클라이언트에서 Blob으로 변환 및 재생
+  3. 원시 PCM 데이터 수신 → WAV 헤더 추가 → Base64 인코딩
+  4. 클라이언트에서 Base64 디코딩 → WAV Blob 생성 → 재생/다운로드
 
 ## 사용 가이드
 1. 웹 페이지에 접속
