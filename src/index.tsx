@@ -37,15 +37,17 @@ app.post('/api/tts', async (c) => {
     const selectedVoice = voiceMap[voice] || 'Kore'
     const apiKey = 'AIzaSyDniM_v_rTlDWEzB-rTnUq5_H-Ci12XrIw'
 
-    // Google GenAI 초기화 (예제와 동일하게 빈 객체로 초기화하고 환경변수 사용)
+    // Google GenAI 초기화
     const ai = new GoogleGenAI({ apiKey })
 
-    // TTS 생성 요청 (Google 공식 예제 형식 그대로 사용)
+    // TTS 생성 요청
+    // 중요: Gemini TTS 모델은 반드시 "Say", "Read" 같은 명령어가 필요
+    // 그렇지 않으면 텍스트를 생성하려고 시도함
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-preview-tts',
       contents: [{ 
         parts: [{ 
-          text: `Say cheerfully: ${text}` 
+          text: `Read this: ${text}`
         }] 
       }],
       config: {
