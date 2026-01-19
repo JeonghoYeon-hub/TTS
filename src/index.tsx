@@ -3,7 +3,12 @@ import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { GoogleGenAI } from '@google/genai'
 
-const app = new Hono()
+// 환경 변수 타입 정의
+type Bindings = {
+  GEMINI_API_KEY: string
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
 
 // CORS 설정
 app.use('/api/*', cors())
@@ -35,7 +40,13 @@ app.post('/api/tts', async (c) => {
     }
 
     const selectedVoice = voiceMap[voice] || 'Kore'
-    const apiKey = 'AIzaSyDniM_v_rTlDWEzB-rTnUq5_H-Ci12XrIw'
+    
+    // 환경 변수에서 API 키 가져오기
+    const apiKey = c.env?.GEMINI_API_KEY
+    
+    if (!apiKey) {
+      return c.json({ error: 'API 키가 설정되지 않았습니다.' }, 500)
+    }
 
     // Google GenAI 초기화
     const ai = new GoogleGenAI({ apiKey })

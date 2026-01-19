@@ -67,6 +67,21 @@
   4. 클라이언트에서 Base64 디코딩 → WAV Blob 생성 → 재생/다운로드
 
 ## 사용 가이드
+
+### 환경 변수 설정 (필수)
+
+1. **로컬 개발용**: `.dev.vars` 파일 생성
+```bash
+# .dev.vars
+GEMINI_API_KEY=your_api_key_here
+```
+
+2. **프로덕션 배포용**: Cloudflare Secrets 설정
+```bash
+npx wrangler pages secret put GEMINI_API_KEY --project-name webapp
+```
+
+### 사용 방법
 1. 웹 페이지에 접속
 2. 텍스트 영역에 음성으로 변환할 텍스트 입력
 3. 원하는 음성 선택 (Kore, Aoede, Charon, Puck)
@@ -94,6 +109,12 @@
 3. ✨ 히스토리 기능 (최근 생성한 음성 목록 - D1 Database 활용)
 4. ✨ 텍스트 파일 업로드 기능
 5. ✨ 배치 처리 (여러 텍스트 한번에 생성)
-6. 🔒 API 키를 환경변수로 관리 (보안 강화)
+6. ✅ **API 키를 환경변수로 관리 (완료)**
 7. 📊 사용량 추적 및 통계
 8. 🚀 프로덕션 배포 (Cloudflare Pages)
+
+## 보안
+
+- ✅ API 키는 환경 변수로 관리 (`.dev.vars` 또는 Cloudflare Secrets)
+- ✅ `.dev.vars` 파일은 `.gitignore`에 포함되어 GitHub에 업로드되지 않음
+- ⚠️ 프로덕션 배포 시 반드시 `wrangler pages secret put` 명령어로 API 키 설정 필요
