@@ -66,9 +66,45 @@ app.post('/api/tts', async (c) => {
     const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
     
     if (audioData) {
+      // Gemini는 원시 PCM 데이터를 반환하므로 WAV 헤더를 추가해야 함
+      // Google 예제에서는 wav 패키지를 사용하지만, 여기서는 수동으로 헤더 생성
+      
+      // Base64 디코딩
+      const pcmData = Buffer.from(audioData, 'base64')
+      
+      // WAV 헤더 생성 (24kHz, 16-bit, mono)
+      const sampleRate = 24000
+      const numChannels = 1
+      const bitsPerSample = 16
+      const dataSize = pcmData.length
+      const wavHeader = Buffer.alloc(44)
+      
+      // RIFF 청크
+      wavHeader.write('RIFF', 0)
+      wavHeader.writeUInt32LE(36 + dataSize, 4)
+      wavHeader.write('WAVE', 8)
+      
+      // fmt 청크
+      wavHeader.write('fmt ', 12)
+      wavHeader.writeUInt32LE(16, 16) // fmt 청크 크기
+      wavHeader.writeUInt16LE(1, 20) // 오디오 포맷 (1 = PCM)
+      wavHeader.writeUInt16LE(numChannels, 22) // 채널 수
+      wavHeader.writeUInt32LE(sampleRate, 24) // 샘플레이트
+      wavHeader.writeUInt32LE(sampleRate * numChannels * bitsPerSample / 8, 28) // 바이트레이트
+      wavHeader.writeUInt16LE(numChannels * bitsPerSample / 8, 32) // 블록 정렬
+      wavHeader.writeUInt16LE(bitsPerSample, 34) // 비트 깊이
+      
+      // data 청크
+      wavHeader.write('data', 36)
+      wavHeader.writeUInt32LE(dataSize, 40)
+      
+      // WAV 헤더 + PCM 데이터 결합
+      const wavFile = Buffer.concat([wavHeader, pcmData])
+      const wavBase64 = wavFile.toString('base64')
+      
       return c.json({
         success: true,
-        audio: audioData,
+        audio: wavBase64,
         mimeType: 'audio/wav'
       })
     }
